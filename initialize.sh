@@ -471,6 +471,24 @@ configure_git() {
     else
         echo -e ".git already exists, skipping git init.\n"
     fi
+
+    # Get the current Git branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+    # Check if the current branch is the default branch
+    if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
+    # Ask the user if they want to create a new branch
+        read -p "Would you like to create a new branch? (y/N): " create_branch
+        if [ "$create_branch" = "y" ] || [ "$create_branch" = "Y" ]; then
+            echo -e "Please enter the name of the new branch:"
+            read branch_name
+            git checkout -b "$branch_name"
+            echo -e "Switched to new branch: $branch_name\n"
+        fi
+    else
+        echo -e "You are not on the default branch. Current branch: $current_branch\n"
+    fi
+
     echo
 }
 
