@@ -22,6 +22,7 @@ To use the script, navigate to your project directory and run:
 
 ```bash
 ./initialize.sh [options]
+```
 
 ### Options
 
