@@ -552,11 +552,14 @@ configure_git() {
 # you should manually do a test without the --numprocesses option since it can sometimes cause problems
 
 run_tests() {
+    echo -e "\n\nRunning tests..."
+    echo -e "-------------------\n"
 
     # Reactivate the environment (assuming mamba/conda is initialized in your shell)
     mamba deactivate
     source $CONDA_PATH/etc/profile.d/conda.sh
     source $CONDA_PATH/etc/profile.d/mamba.sh
+    set +e
 
     echo -e "\nTesting the MDAnalysis installation...\n"
     PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print tolower($1) substr($2, 1, 4)}')
@@ -579,7 +582,6 @@ run_tests() {
     fi
 
 }
-
 
 
 
@@ -612,6 +614,8 @@ main() {
     fi
 }
 
+
 # pass to main all command-line parameters and run it
 main "$@"
+
 

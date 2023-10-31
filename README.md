@@ -29,6 +29,7 @@ To use the script, navigate to your project directory and run:
 - `-t`: Run tests after setting up the environment.
 - `-n ENVIRONMENT_NAME`: Specify the name of the conda environment (default: md_project).
 - `-c`: Use the (condaenv_cuda.yml) conda environment file which includes CUDA libraries from the Nvidia conda channel.
+- `-o`: Install OpenMM and OpenMM-related packages.
 - `-h`: Show the help message and exit.
 
 
