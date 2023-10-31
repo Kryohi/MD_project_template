@@ -77,9 +77,9 @@ fi
 
 echo
 
-
-conda env config vars set UNIPROT_ID=$ENTRY
 conda env config vars set GENE_NAME=$NAME_GENE
+conda env config vars set UNIPROT_ID=$ENTRY
+conda env config vars set PDB_FILE="${NAME_GENE}_AF2.pdb"
 echo "Environmental variable UNIPROT_ID set for the environment $CONDA_DEFAULT_ENV"
 
 

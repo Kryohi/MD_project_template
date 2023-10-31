@@ -16,6 +16,7 @@ This script automates the setup process for a Molecular Dynamics (MD) project, s
 ## Prerequisites
 - Miniforge (previously Mambaforge) is recommended. You can download it from [here](https://github.com/conda-forge/miniforge#mambaforge).
 - A CUDA-enabled GPU is recommended, even though the script currently does not set up GROMACS/NAMD/Amber.
+- A .env file in the same directory as the script should be added, with the variables AUTHOR_NAME and AUTHOR_EMAIL.
 
 ## Usage
 To use the script, navigate to your project directory and run:
@@ -29,6 +30,7 @@ To use the script, navigate to your project directory and run:
 - `-t`: Run tests after setting up the environment.
 - `-n ENVIRONMENT_NAME`: Specify the name of the conda environment (default: md_project).
 - `-c`: Use the (condaenv_cuda.yml) conda environment file which includes CUDA libraries from the Nvidia conda channel.
+- `-o`: Install OpenMM and OpenMM-related packages.
 - `-h`: Show the help message and exit.
 
 

@@ -33,10 +33,26 @@
 #        fix genomicinfo.sh
 #        support for multiple proteins or variants
 #        make download_structures.sh more complete and flexible
-#        personalize the folder structure based on the type of simulation(s) (REMD, reservoir REMD, GAMD etc.)
+#        personalize the folder structure based on the type of simulation(s) (REMD, GAMD etc.)
 #        integrate with cookiecutter (!?)
 #        change environment to inside project (with --prefix)?
+#        make openmm and gamd packages/tests optional
 
+
+# Initialize variables with default values
+RUN_TESTS=false
+INSTALL_OPENMM=false
+ENVIRONMENT_NAME="md_project"  # Default environment name
+ENV_NAME_SET=false # whether a new name has been passed to the script
+
+# load author info
+source .env
+# set the yml files to use for the conda environment
+CONDA_ENV_FILE="condaenv.yml"
+CONDA_ENV_FILE_CUDA="condaenv_cuda.yml"
+
+# Read the project folder path
+PROJECT_FOLDER=$(pwd)
 
 
 show_usage() {
@@ -44,43 +60,57 @@ show_usage() {
     echo "  -t    Run tests after setting up the environment (optional)"
     echo "  -n    Specify the name of the conda environment (default: md_project)"
     echo "  -c    Use the CUDA-enabled conda environment file (condaenv_cuda.yml) instead of the default (condaenv.yml)"
+    echo "  -o    Install and optionally test OpenMM and related packages"
     echo "  -h    Show this help message and exit"
 }
 
 
 # Function to read optional arguments
 read_optional_args() {
-    while getopts ":tn:ch" opt; do
+
+    while getopts ":tn:coh" opt; do
         case ${opt} in
             t )
                 RUN_TESTS=true
                 ;;
             n )
                 ENVIRONMENT_NAME="$OPTARG"
+                ENV_NAME_SET=true
                 ;;
             c )
                 CONDA_ENV_FILE=$CONDA_ENV_FILE_CUDA
+                ;;
+            o )
+                INSTALL_OPENMM=true
                 ;;
             h )
                 show_usage
                 exit 0
                 ;;
             \? )
+                echo "Invalid Option: -$OPTARG" 1>&2
+                show_usage
+                exit 1
+                ;;
+            : )
+                echo "Invalid Option: -$OPTARG requires an argument" 1>&2
                 show_usage
                 exit 1
                 ;;
         esac
     done
+    shift $((OPTIND -1))
 
     # Confirm with the user if they want to change the default environment name
-    if [ "$ENVIRONMENT_NAME" = "md_project" ]; then
+    if [ "$ENVIRONMENT_NAME" = "md_project" ] && [ "$ENV_NAME_SET" = false ]; then
         echo -e "The default conda environment name is set to 'md_project'."
         read -p "Would you like to change it? (y/N): " change_name
         if [ "$change_name" = "y" ] || [ "$change_name" = "Y" ]; then
             echo -e "Please enter the new conda environment name:"
-            read ENVIRONMENT_NAME
+            read -r ENVIRONMENT_NAME
         fi
     fi
+
 
 }
 
@@ -109,15 +139,28 @@ detect_system_information() {
     echo
 
     # GPU Info (Assumes NVIDIA GPU)
-    echo "GPU Information:"
-    vram=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader)
-    echo "$(nvidia-smi --query-gpu=name --format=csv,noheader) ($vram)"
+    if command -v nvidia-smi > /dev/null; then
+        echo "GPU Information:"
+        vram=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader)
+        echo "$(nvidia-smi --query-gpu=name --format=csv,noheader) ($vram)"
+    else
+        echo "No GPU detected."
+    fi
     echo
 
-
-    # CUDA Version (Assumes CUDA is installed)
-    echo "CUDA Version:"
-    nvcc --version | grep "release" | awk '{print $6}' | cut -c2-
+    # Check if nvcc is installed
+    if command -v nvcc > /dev/null; then
+        # CUDA Version
+        echo "CUDA Version:"
+        cuda_version=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2-)
+        echo $cuda_version
+        # CUDA Executable Location
+        echo "CUDA Executable Location:"
+        cuda_path=$(which nvcc)
+        echo $cuda_path
+    else
+        echo "CUDA is not installed or nvcc is not in PATH"
+    fi
     echo
 
     # Storage info
@@ -146,12 +189,12 @@ create_folder_structure() {
     if (( FREE_SPACE_KiB < 300 * 1024 * 1024 )); then
         echo "Free space is less than 300GiB!"
         echo "It is recommended that you provide a new path with sufficient space for storing the project data. The data folder will be automatically created:"
-        read NEW_PATH
+        read -r NEW_PATH
 
         # Optionally, you might want to check if the provided path exists and has enough space
         while [[ ! -d "$NEW_PATH" ]]; do
             echo "The path does not exist. Please provide a valid path:"
-            read NEW_PATH
+            read -r NEW_PATH
         done
 
         DEVICE=$(df $NEW_PATH | tail -1 | awk '{print $1}')
@@ -160,7 +203,7 @@ create_folder_structure() {
         DEVICE_TYPE=$(lsblk -d -o NAME,ROTA | grep $DEVICE_NAME | awk '{if ($2 == "0") print "SSD"; else print "HDD"}')
         DEVICE_FREE=$(df -h . | awk 'NR==2 {print $4 " free out of " $2}')
 
-        echo "The storage of the project directory is a $DEVICE_TYPE with $DEVICE_FREE of space."
+        echo "The storage of the project directory is an $DEVICE_TYPE with $DEVICE_FREE of space."
 
         mkdir -p "$NEW_PATH/data"
 
@@ -184,7 +227,7 @@ create_folder_structure() {
     mkdir -p "data/04-analysis"
     mkdir -p "data/forcefields"
 
-    echo "Done"
+    echo -e "Done\n\n"
 }
 
 
@@ -196,7 +239,7 @@ create_conda_environment() {
     echo -e "-------------------\n"
 
     # update conda and install the faster mamba
-    echo -e "\nUpdating Conda and installing/upgrading Mamba..."
+    echo "Updating Conda and installing/upgrading Mamba..."
     conda update -n base -c conda-forge conda
 
     # Check if mamba is installed
@@ -223,10 +266,10 @@ create_conda_environment() {
 
     # useless?
     CURRENT_SHELL=$(basename $SHELL)
-    if [ "$CURRENT_SHELL" = "zsh" ]; then
+    if [ "$CURRENT_SHELL" == "zsh" ]; then
         #source ~/.zshrc
         echo "skipping source ~/.zshrc"
-    elif [ "$CURRENT_SHELL" = "bash" ]; then
+    elif [ "$CURRENT_SHELL" == "bash" ]; then
         source ~/.bashrc
     # add more conditions for other shells if necessary
     else
@@ -249,6 +292,17 @@ create_conda_environment() {
     ENV_PIP_PATH=$(dirname $ENV_PYTHON_PATH)/pip
     echo "Environment python path: $ENV_PYTHON_PATH"
 
+    # Set environment name in the yml files
+    awk -v new_name="$ENVIRONMENT_NAME" 'NR==1 {sub(/name: .*/, "name: " new_name)} 1' $CONDA_ENV_FILE > temp.yml && mv temp.yml $CONDA_ENV_FILE
+    awk -v new_name="$ENVIRONMENT_NAME" 'NR==1 {sub(/name: .*/, "name: " new_name)} 1' $CONDA_ENV_FILE_CUDA > temp.yml && mv temp.yml $CONDA_ENV_FILE_CUDA
+    echo "Name of the environment set to $ENVIRONMENT_NAME."
+
+    # Check if the INSTALL_OPENMM variable is set to false
+    if [ "$INSTALL_OPENMM" == "false" ]; then
+        # Use sed to delete the line containing "- openmm" from the environment files
+        sed -i '/^- openmm/d' $CONDA_ENV_FILE
+        sed -i '/^- openmm/d' $CONDA_ENV_FILE_CUDA
+    fi
 
     echo -e "\nCreating the new conda environment..."
     export NVCC_ACCEPT_LICENSE=yes #automatic acceptance for CUDA stuff, if applicable
@@ -260,7 +314,7 @@ create_conda_environment() {
 
     # update environment (useful for later script runs)
     echo "Updating the environment..."
-    mamba env update -f "$CONDA_ENV_FILE"
+    mamba env update -f "$CONDA_ENV_FILE" -p "$ENV_PATH" --prune
 
     echo "Activating the environment..."
     # Activate the environment (assuming mamba/conda is initialized in your shell)
@@ -330,7 +384,7 @@ install_additional_packages() {
     if which pymol > /dev/null; then
         echo "pymol is installed."
     else
-        echo "pymol is not installed or is not in PATH. Keep in mind an opensource and free version o PyMol can be found at github.com/schrodinger/pymol-open-source"
+        echo "pymol is not installed or is not in PATH. Keep in mind an opensource and free version of PyMol can be found at github.com/schrodinger/pymol-open-source"
     fi
 
     if which gmx > /dev/null; then
@@ -351,7 +405,7 @@ install_additional_packages() {
     cd pyinteraph2
     #pip install -r requirements.txt
     sed -i '/^\"MDAnalysis/d' setup.py # we disregard impositions on the minor version of MDAnalysis (and other libraries) by PyInteraph
-    $ENV_PYTHON_PATH setup.py install
+    $ENV_PYTHON_PATH ./setup.py install
     echo
     cd ..
 
@@ -369,9 +423,20 @@ install_additional_packages() {
     echo "Downloading ens-dRMS (structure ensemble comparison)..."
     git clone https://github.com/lazartomi/ens-dRMS
     echo
-    cd ..
 
+    # GAMD
+    if [ "$INSTALL_OPENMM" = true ]; then
+        git clone https://github.com/MiaoLab20/gamd-openmm
+        cd gamd-openmm
+        $ENV_PYTHON_PATH ./setup.py install
+        cd ..
+    fi
+
+    git clone https://github.com/MiaoLab20/PyReweighting
+
+    cd ..
     set -e
+    echo
 }
 
 
@@ -421,7 +486,7 @@ download_structures() {
 
 configure_git() {
 
-    echo -e "\nConfiguring git..."
+    echo -e "\n\nConfiguring git..."
     echo -e "-------------------\n"
 
     # List of trajectory extensions to ignore
@@ -500,12 +565,18 @@ configure_git() {
 # you should manually do a test without the --numprocesses option since it can sometimes cause problems
 
 run_tests() {
+    echo -e "\n\nRunning tests..."
+    echo -e "-------------------\n"
 
     # Reactivate the environment (assuming mamba/conda is initialized in your shell)
-    conda deactivate
-    conda activate $ENVIRONMENT_NAME
+    #mamba deactivate
+    source $CONDA_PATH/etc/profile.d/conda.sh
+    source $CONDA_PATH/etc/profile.d/mamba.sh
+    set +e
+    current_env=$(conda info --envs | grep '*' | awk '{print $1}')
+    echo "Running tests in the Mamba/Conda Environment $current_env..."
 
-    echo -e "\nTesting the MDAnalysis installation...\n"
+    echo -e "Testing the MDAnalysis installation...\n"
     PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print tolower($1) substr($2, 1, 4)}')
     MDATPATH=$ENV_PATH/lib/$PYTHON_VERSION/site-packages/MDAnalysisTests/
     PYTEST_PATH="$ENV_PATH/bin/pytest"
@@ -519,7 +590,15 @@ run_tests() {
     # Use Python from the local environment to test that jax installed correctly with cuda support
     python3 ./test_python_packages.py
 
+    # test openmm
+    if [ "$INSTALL_OPENMM" == true ]; then
+        echo -e "\nTesting OpenMM installation..."
+        python3 -m openmm.testInstallation
+    fi
+    echo
+
 }
+
 
 
 main() {
@@ -529,24 +608,17 @@ main() {
     # Exit the script if any command fails
     set -e
 
-    # Initialize variables with default values
-    RUN_TESTS=false
-    ENVIRONMENT_NAME="md_project"  # Default environment name
-
-    # TODO move to .env file?
-    AUTHOR_NAME="Fabio Mazza"
-    AUTHOR_EMAIL="fabio.mazza@unitn.it"
-    CONDA_ENV_FILE="condaenv.yml"
-    CONDA_ENV_FILE_CUDA="condaenv_cuda.yml"
-
-    # Read the project folder path
-    PROJECT_FOLDER=$(pwd)
-
     # make the necessary shell scripts executable
     chmod +x avxlevel.sh genomicinfo.sh download_structures.sh
 
     # Call functions
-    read_optional_args
+    read_optional_args "$@"
+    # Print all optional arguments and their values
+    echo "Optional Arguments and Their Values:"
+    for arg in "${!OPTIONAL_ARGS[@]}"; do
+        echo "$arg: ${OPTIONAL_ARGS[$arg]}"
+    done
+
     detect_system_information
     create_folder_structure
     create_conda_environment
@@ -558,5 +630,7 @@ main() {
     fi
 }
 
-main
+
+# pass to main all command-line parameters and run it
+main "$@"
 

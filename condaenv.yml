@@ -17,6 +17,7 @@ dependencies:
   - biopython
   - ambertools=23
   - parmed
+  - openmm
   - mdanalysis
   - MDAnalysisTests
 #  - mdachecker
