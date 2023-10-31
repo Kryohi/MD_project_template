@@ -609,7 +609,7 @@ main() {
     set -e
 
     # make the necessary shell scripts executable
-    chmod +x avxlevel.sh genomicinfo.sh download_structures.sh
+    chmod +x avxlevel.sh download_structures.sh
 
     # Call functions
     read_optional_args "$@"
