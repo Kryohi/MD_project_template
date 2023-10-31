@@ -33,9 +33,10 @@
 #        fix genomicinfo.sh
 #        support for multiple proteins or variants
 #        make download_structures.sh more complete and flexible
-#        personalize the folder structure based on the type of simulation(s) (REMD, reservoir REMD, GAMD etc.)
+#        personalize the folder structure based on the type of simulation(s) (REMD, GAMD etc.)
 #        integrate with cookiecutter (!?)
 #        change environment to inside project (with --prefix)?
+#        make openmm and gamd packages/tests optional
 
 
 
@@ -44,6 +45,7 @@ show_usage() {
     echo "  -t    Run tests after setting up the environment (optional)"
     echo "  -n    Specify the name of the conda environment (default: md_project)"
     echo "  -c    Use the CUDA-enabled conda environment file (condaenv_cuda.yml) instead of the default (condaenv.yml)"
+    echo "  -o    Install and optionally test OpenMM and related packages"
     echo "  -h    Show this help message and exit"
 }
 
@@ -60,6 +62,9 @@ read_optional_args() {
                 ;;
             c )
                 CONDA_ENV_FILE=$CONDA_ENV_FILE_CUDA
+                ;;
+            o )
+                INSTALL_OPENMM=true
                 ;;
             h )
                 show_usage
@@ -160,7 +165,7 @@ create_folder_structure() {
         DEVICE_TYPE=$(lsblk -d -o NAME,ROTA | grep $DEVICE_NAME | awk '{if ($2 == "0") print "SSD"; else print "HDD"}')
         DEVICE_FREE=$(df -h . | awk 'NR==2 {print $4 " free out of " $2}')
 
-        echo "The storage of the project directory is a $DEVICE_TYPE with $DEVICE_FREE of space."
+        echo "The storage of the project directory is an $DEVICE_TYPE with $DEVICE_FREE of space."
 
         mkdir -p "$NEW_PATH/data"
 
@@ -184,7 +189,7 @@ create_folder_structure() {
     mkdir -p "data/04-analysis"
     mkdir -p "data/forcefields"
 
-    echo "Done"
+    echo -e "Done\n\n"
 }
 
 
@@ -196,7 +201,7 @@ create_conda_environment() {
     echo -e "-------------------\n"
 
     # update conda and install the faster mamba
-    echo -e "\nUpdating Conda and installing/upgrading Mamba..."
+    echo "Updating Conda and installing/upgrading Mamba..."
     conda update -n base -c conda-forge conda
 
     # Check if mamba is installed
@@ -223,10 +228,10 @@ create_conda_environment() {
 
     # useless?
     CURRENT_SHELL=$(basename $SHELL)
-    if [ "$CURRENT_SHELL" = "zsh" ]; then
+    if [ "$CURRENT_SHELL" == "zsh" ]; then
         #source ~/.zshrc
         echo "skipping source ~/.zshrc"
-    elif [ "$CURRENT_SHELL" = "bash" ]; then
+    elif [ "$CURRENT_SHELL" == "bash" ]; then
         source ~/.bashrc
     # add more conditions for other shells if necessary
     else
@@ -249,6 +254,16 @@ create_conda_environment() {
     ENV_PIP_PATH=$(dirname $ENV_PYTHON_PATH)/pip
     echo "Environment python path: $ENV_PYTHON_PATH"
 
+    # Set environment name in the yml files
+    awk -v new_name="$ENVIRONMENT_NAME" 'NR==1 {sub(/name: .*/, "name: " new_name)} 1' $CONDA_ENV_FILE > temp.yml && mv temp.yml $CONDA_ENV_FILE
+    awk -v new_name="$ENVIRONMENT_NAME" 'NR==1 {sub(/name: .*/, "name: " new_name)} 1' $CONDA_ENV_FILE_CUDA > temp.yml && mv temp.yml $CONDA_ENV_FILE_CUDA
+    echo "Name of the environment set to $ENVIRONMENT_NAME."
+
+    # Check if the INSTALL_OPENMM variable is set to false
+    if [ "$INSTALL_OPENMM" == "false" ]; then
+        # Use sed to delete the line containing "- openmm" from condaenv.yml
+        sed -i '/^- openmm/d' condaenv.yml
+    fi
 
     echo -e "\nCreating the new conda environment..."
     export NVCC_ACCEPT_LICENSE=yes #automatic acceptance for CUDA stuff, if applicable
@@ -260,7 +275,7 @@ create_conda_environment() {
 
     # update environment (useful for later script runs)
     echo "Updating the environment..."
-    mamba env update -f "$CONDA_ENV_FILE"
+    mamba env update -f "$CONDA_ENV_FILE" -p "$ENV_PATH" --prune
 
     echo "Activating the environment..."
     # Activate the environment (assuming mamba/conda is initialized in your shell)
@@ -330,7 +345,7 @@ install_additional_packages() {
     if which pymol > /dev/null; then
         echo "pymol is installed."
     else
-        echo "pymol is not installed or is not in PATH. Keep in mind an opensource and free version o PyMol can be found at github.com/schrodinger/pymol-open-source"
+        echo "pymol is not installed or is not in PATH. Keep in mind an opensource and free version of PyMol can be found at github.com/schrodinger/pymol-open-source"
     fi
 
     if which gmx > /dev/null; then
@@ -369,8 +384,18 @@ install_additional_packages() {
     echo "Downloading ens-dRMS (structure ensemble comparison)..."
     git clone https://github.com/lazartomi/ens-dRMS
     echo
-    cd ..
 
+    # GAMD
+    if [ "$INSTALL_OPENMM" == "true" ]; then
+        git clone https://github.com/MiaoLab20/gamd-openmm
+        cd gamd-openmm
+        setup.py install
+        cd ..
+    fi
+
+    git clone https://github.com/MiaoLab20/PyReweighting
+
+    cd ..
     set -e
 }
 
@@ -421,7 +446,7 @@ download_structures() {
 
 configure_git() {
 
-    echo -e "\nConfiguring git..."
+    echo -e "\n\nConfiguring git..."
     echo -e "-------------------\n"
 
     # List of trajectory extensions to ignore
@@ -502,8 +527,9 @@ configure_git() {
 run_tests() {
 
     # Reactivate the environment (assuming mamba/conda is initialized in your shell)
-    conda deactivate
-    conda activate $ENVIRONMENT_NAME
+    mamba deactivate
+    source $CONDA_PATH/etc/profile.d/conda.sh
+    source $CONDA_PATH/etc/profile.d/mamba.sh
 
     echo -e "\nTesting the MDAnalysis installation...\n"
     PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print tolower($1) substr($2, 1, 4)}')
@@ -519,7 +545,15 @@ run_tests() {
     # Use Python from the local environment to test that jax installed correctly with cuda support
     python3 ./test_python_packages.py
 
+    # test openmm
+    if [ "$INSTALL_OPENMM" == true ]; then
+        echo -e "\nTesting OpenMM installation..."
+        python3 -m openmm.testInstallation
+    fi
+
 }
+
+
 
 
 main() {
@@ -531,6 +565,7 @@ main() {
 
     # Initialize variables with default values
     RUN_TESTS=false
+    INSTALL_OPENMM=false
     ENVIRONMENT_NAME="md_project"  # Default environment name
 
     # TODO move to .env file?
