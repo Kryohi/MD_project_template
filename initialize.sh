@@ -39,6 +39,22 @@
 #        make openmm and gamd packages/tests optional
 
 
+# Initialize variables with default values
+RUN_TESTS=false
+INSTALL_OPENMM=false
+ENVIRONMENT_NAME="md_project"  # Default environment name
+ENV_NAME_SET=false # whether a new name has been passed to the script
+
+
+# TODO move to .env file?
+AUTHOR_NAME="Fabio Mazza"
+AUTHOR_EMAIL="fabio.mazza@unitn.it"
+CONDA_ENV_FILE="condaenv.yml"
+CONDA_ENV_FILE_CUDA="condaenv_cuda.yml"
+
+# Read the project folder path
+PROJECT_FOLDER=$(pwd)
+
 
 show_usage() {
     echo "Usage: $0 [-t] [-n ENVIRONMENT_NAME] [-c]"
@@ -52,13 +68,15 @@ show_usage() {
 
 # Function to read optional arguments
 read_optional_args() {
-    while getopts ":tn:ch" opt; do
+
+    while getopts ":tn:coh" opt; do
         case ${opt} in
             t )
                 RUN_TESTS=true
                 ;;
             n )
                 ENVIRONMENT_NAME="$OPTARG"
+                ENV_NAME_SET=true
                 ;;
             c )
                 CONDA_ENV_FILE=$CONDA_ENV_FILE_CUDA
@@ -71,14 +89,21 @@ read_optional_args() {
                 exit 0
                 ;;
             \? )
+                echo "Invalid Option: -$OPTARG" 1>&2
+                show_usage
+                exit 1
+                ;;
+            : )
+                echo "Invalid Option: -$OPTARG requires an argument" 1>&2
                 show_usage
                 exit 1
                 ;;
         esac
     done
+    shift $((OPTIND -1))
 
     # Confirm with the user if they want to change the default environment name
-    if [ "$ENVIRONMENT_NAME" = "md_project" ]; then
+    if [ "$ENVIRONMENT_NAME" = "md_project" ] && [ "$ENV_NAME_SET" = false ]; then
         echo -e "The default conda environment name is set to 'md_project'."
         read -p "Would you like to change it? (y/N): " change_name
         if [ "$change_name" = "y" ] || [ "$change_name" = "Y" ]; then
@@ -86,6 +111,7 @@ read_optional_args() {
             read ENVIRONMENT_NAME
         fi
     fi
+
 
 }
 
@@ -261,8 +287,9 @@ create_conda_environment() {
 
     # Check if the INSTALL_OPENMM variable is set to false
     if [ "$INSTALL_OPENMM" == "false" ]; then
-        # Use sed to delete the line containing "- openmm" from condaenv.yml
-        sed -i '/^- openmm/d' condaenv.yml
+        # Use sed to delete the line containing "- openmm" from the environment files
+        sed -i '/^- openmm/d' $CONDA_ENV_FILE
+        sed -i '/^- openmm/d' $CONDA_ENV_FILE_CUDA
     fi
 
     echo -e "\nCreating the new conda environment..."
@@ -563,25 +590,17 @@ main() {
     # Exit the script if any command fails
     set -e
 
-    # Initialize variables with default values
-    RUN_TESTS=false
-    INSTALL_OPENMM=false
-    ENVIRONMENT_NAME="md_project"  # Default environment name
-
-    # TODO move to .env file?
-    AUTHOR_NAME="Fabio Mazza"
-    AUTHOR_EMAIL="fabio.mazza@unitn.it"
-    CONDA_ENV_FILE="condaenv.yml"
-    CONDA_ENV_FILE_CUDA="condaenv_cuda.yml"
-
-    # Read the project folder path
-    PROJECT_FOLDER=$(pwd)
-
     # make the necessary shell scripts executable
     chmod +x avxlevel.sh genomicinfo.sh download_structures.sh
 
     # Call functions
-    read_optional_args
+    read_optional_args "$@"
+    # Print all optional arguments and their values
+    echo "Optional Arguments and Their Values:"
+    for arg in "${!OPTIONAL_ARGS[@]}"; do
+        echo "$arg: ${OPTIONAL_ARGS[$arg]}"
+    done
+
     detect_system_information
     create_folder_structure
     create_conda_environment
@@ -593,5 +612,6 @@ main() {
     fi
 }
 
-main
+# pass to main all command-line parameters and run it
+main "$@"
 
