@@ -45,10 +45,9 @@ INSTALL_OPENMM=false
 ENVIRONMENT_NAME="md_project"  # Default environment name
 ENV_NAME_SET=false # whether a new name has been passed to the script
 
-
-# TODO move to .env file?
-AUTHOR_NAME="Fabio Mazza"
-AUTHOR_EMAIL="fabio.mazza@unitn.it"
+# load author info
+source .env
+# set the yml files to use for the conda environment
 CONDA_ENV_FILE="condaenv.yml"
 CONDA_ENV_FILE_CUDA="condaenv_cuda.yml"
 
@@ -596,6 +595,7 @@ run_tests() {
         echo -e "\nTesting OpenMM installation..."
         python3 -m openmm.testInstallation
     fi
+    echo
 
 }
 
