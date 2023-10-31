@@ -108,7 +108,7 @@ read_optional_args() {
         read -p "Would you like to change it? (y/N): " change_name
         if [ "$change_name" = "y" ] || [ "$change_name" = "Y" ]; then
             echo -e "Please enter the new conda environment name:"
-            read ENVIRONMENT_NAME
+            read -r ENVIRONMENT_NAME
         fi
     fi
 
@@ -140,15 +140,28 @@ detect_system_information() {
     echo
 
     # GPU Info (Assumes NVIDIA GPU)
-    echo "GPU Information:"
-    vram=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader)
-    echo "$(nvidia-smi --query-gpu=name --format=csv,noheader) ($vram)"
+    if command -v nvidia-smi > /dev/null; then
+        echo "GPU Information:"
+        vram=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader)
+        echo "$(nvidia-smi --query-gpu=name --format=csv,noheader) ($vram)"
+    else
+        echo "No GPU detected."
+    fi
     echo
 
-
-    # CUDA Version (Assumes CUDA is installed)
-    echo "CUDA Version:"
-    nvcc --version | grep "release" | awk '{print $6}' | cut -c2-
+    # Check if nvcc is installed
+    if command -v nvcc > /dev/null; then
+        # CUDA Version
+        echo "CUDA Version:"
+        cuda_version=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2-)
+        echo $cuda_version
+        # CUDA Executable Location
+        echo "CUDA Executable Location:"
+        cuda_path=$(which nvcc)
+        echo $cuda_path
+    else
+        echo "CUDA is not installed or nvcc is not in PATH"
+    fi
     echo
 
     # Storage info
@@ -177,12 +190,12 @@ create_folder_structure() {
     if (( FREE_SPACE_KiB < 300 * 1024 * 1024 )); then
         echo "Free space is less than 300GiB!"
         echo "It is recommended that you provide a new path with sufficient space for storing the project data. The data folder will be automatically created:"
-        read NEW_PATH
+        read -r NEW_PATH
 
         # Optionally, you might want to check if the provided path exists and has enough space
         while [[ ! -d "$NEW_PATH" ]]; do
             echo "The path does not exist. Please provide a valid path:"
-            read NEW_PATH
+            read -r NEW_PATH
         done
 
         DEVICE=$(df $NEW_PATH | tail -1 | awk '{print $1}')
@@ -393,7 +406,7 @@ install_additional_packages() {
     cd pyinteraph2
     #pip install -r requirements.txt
     sed -i '/^\"MDAnalysis/d' setup.py # we disregard impositions on the minor version of MDAnalysis (and other libraries) by PyInteraph
-    $ENV_PYTHON_PATH setup.py install
+    $ENV_PYTHON_PATH ./setup.py install
     echo
     cd ..
 
@@ -413,10 +426,10 @@ install_additional_packages() {
     echo
 
     # GAMD
-    if [ "$INSTALL_OPENMM" == "true" ]; then
+    if [ "$INSTALL_OPENMM" = true ]; then
         git clone https://github.com/MiaoLab20/gamd-openmm
         cd gamd-openmm
-        setup.py install
+        $ENV_PYTHON_PATH ./setup.py install
         cd ..
     fi
 
@@ -424,6 +437,7 @@ install_additional_packages() {
 
     cd ..
     set -e
+    echo
 }
 
 
@@ -556,12 +570,14 @@ run_tests() {
     echo -e "-------------------\n"
 
     # Reactivate the environment (assuming mamba/conda is initialized in your shell)
-    mamba deactivate
+    #mamba deactivate
     source $CONDA_PATH/etc/profile.d/conda.sh
     source $CONDA_PATH/etc/profile.d/mamba.sh
     set +e
+    current_env=$(conda info --envs | grep '*' | awk '{print $1}')
+    echo "Running tests in the Mamba/Conda Environment $current_env..."
 
-    echo -e "\nTesting the MDAnalysis installation...\n"
+    echo -e "Testing the MDAnalysis installation...\n"
     PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print tolower($1) substr($2, 1, 4)}')
     MDATPATH=$ENV_PATH/lib/$PYTHON_VERSION/site-packages/MDAnalysisTests/
     PYTEST_PATH="$ENV_PATH/bin/pytest"
@@ -617,5 +633,4 @@ main() {
 
 # pass to main all command-line parameters and run it
 main "$@"
-
 
