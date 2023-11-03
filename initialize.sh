@@ -37,6 +37,7 @@
 #        integrate with cookiecutter (!?)
 #        change environment to inside project (with --prefix)?
 #        make openmm and gamd packages/tests optional
+#        create sympling of force field folder to 00-structures so that gromacs can find them
 
 
 # Initialize variables with default values
@@ -221,11 +222,15 @@ create_folder_structure() {
     mkdir -p "img"
     mkdir -p "papers"
     mkdir -p "data/00-structures"
-    mkdir -p "data/01-minimization"
+    mkdir -p "data/01-preanalysis"
     mkdir -p "data/02-equilibration"
+    mkdir -p "data/02-equilibration/0-min"
+    mkdir -p "data/02-equilibration/1-nvtfix"
+    mkdir -p "data/02-equilibration/2-nptfix"
+    mkdir -p "data/02-equilibration/3-npt"
     mkdir -p "data/03-prod"
     mkdir -p "data/04-analysis"
-    mkdir -p "data/forcefields"
+    mkdir -p "data/forcefields.ff"
 
     echo -e "Done\n\n"
 }
@@ -279,9 +284,8 @@ create_conda_environment() {
 
 
     # Paths to the new environment's folder, Python and pip executables
-    #CONDA_PATH=$(conda info --envs | grep "^base " | awk '{print $2}') # 2 or 3?
-    CONDA_PATH=$(conda info --envs | grep "^base " | awk '{print ($2 == "base" ? $3 : $2)}')
-    # CONDA_PATH=$(conda config --show | grep "root_prefix" | awk '{print $2}') #alternative way
+    #CONDA_PATH=$(conda info --envs | grep "^base " | awk '{print ($2 == "base" ? $2 : $3)}') # TODO check this on other machines
+    CONDA_PATH=$(conda config --show | grep "root_prefix" | awk '{print $2}') # alternative way
 
     # prefix path for the new environment
     ENV_PATH=$CONDA_PATH/envs/$ENVIRONMENT_NAME
@@ -328,7 +332,7 @@ create_conda_environment() {
 
     # Set the project folder as a Conda environmental variable
     conda env config vars set PROJECT_DIR=$PROJECT_FOLDER # retrieve in python with project_dir = os.getenv("PROJECT_DIR")
-    echo -e "Project folder set in the PROJECT_DIR Conda environmental variable.\n"
+    echo -e "Project folder set in the PROJECT_DIR=$PROJECT_FOLDER Conda environmental variable.\n"
 
     # Enable the environment for notebooks
     $ENV_PYTHON_PATH -m ipykernel install --user --name $ENVIRONMENT_NAME
@@ -576,7 +580,7 @@ run_tests() {
     current_env=$(conda info --envs | grep '*' | awk '{print $1}')
     echo "Running tests in the Mamba/Conda Environment $current_env..."
 
-    echo -e "Testing the MDAnalysis installation...\n"
+    echo -e "/nTesting the MDAnalysis installation...\n"
     PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print tolower($1) substr($2, 1, 4)}')
     MDATPATH=$ENV_PATH/lib/$PYTHON_VERSION/site-packages/MDAnalysisTests/
     PYTEST_PATH="$ENV_PATH/bin/pytest"
@@ -614,10 +618,10 @@ main() {
     # Call functions
     read_optional_args "$@"
     # Print all optional arguments and their values
-    echo "Optional Arguments and Their Values:"
-    for arg in "${!OPTIONAL_ARGS[@]}"; do
-        echo "$arg: ${OPTIONAL_ARGS[$arg]}"
-    done
+    #echo "Optional Arguments and Their Values:"
+    #for arg in "${!OPTIONAL_ARGS[@]}"; do
+    #    echo "$arg: ${OPTIONAL_ARGS[$arg]}"
+    #done
 
     detect_system_information
     create_folder_structure
@@ -633,4 +637,3 @@ main() {
 
 # pass to main all command-line parameters and run it
 main "$@"
-
