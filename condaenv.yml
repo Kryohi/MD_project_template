@@ -19,6 +19,7 @@ dependencies:
   - biotite
   - ambertools=23
   - parmed
+  - vmd-python
   - openmm
   - mdanalysis
   - MDAnalysisTests
