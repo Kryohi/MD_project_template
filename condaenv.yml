@@ -14,7 +14,9 @@ dependencies:
   - numpy>=1.23.1
   - scipy>=1.9.2
   - scikit-learn
+  - imbalanced-learn
   - biopython
+  - biotite
   - ambertools=23
   - parmed
   - openmm
@@ -54,6 +56,8 @@ dependencies:
   - pytest-cov
   - pytest-xdist
   - codecov
+  - autopep8
+  - watermark
   - sphinx
   - sphinx_rtd_theme
   - jq
