@@ -124,7 +124,7 @@ read_optional_args() {
 detect_system_information() {
     echo
     echo "System Information:"
-    echo -e "-------------------\n"
+    echo -e "----------------------\n"
 
     # Kernel Version
     echo "Kernel Version:"
@@ -185,7 +185,7 @@ detect_system_information() {
 create_folder_structure() {
 
     echo -e -n "\nCreating folder structure...\n"
-    echo -e "-------------------\n"
+    echo -e "----------------------\n"
 
 
 
@@ -252,7 +252,7 @@ create_folder_structure() {
 create_conda_environment() {
 
     echo "Setup of the mamba environment"
-    echo -e "-------------------\n"
+    echo -e "----------------------\n"
 
     # update conda and install the faster mamba
     echo "Updating Conda and installing/upgrading Mamba..."
@@ -472,7 +472,7 @@ install_additional_packages() {
 
 download_structures() {
     echo -e "\nDownload starting structure and force field files..."
-    echo -e "-------------------\n"
+    echo -e "----------------------\n"
 
     cd data
 
@@ -515,7 +515,7 @@ download_structures() {
 configure_git() {
 
     echo -e "\n\nConfiguring git..."
-    echo -e "-------------------\n"
+    echo -e "----------------------\n"
 
     # List of trajectory extensions to ignore
     extensions=(
@@ -594,7 +594,7 @@ configure_git() {
 
 run_tests() {
     echo -e "\n\nRunning tests..."
-    echo -e "-------------------\n"
+    echo -e "----------------------\n"
 
     # Reactivate the environment (assuming mamba/conda is initialized in your shell)
     #mamba deactivate
@@ -604,7 +604,7 @@ run_tests() {
     current_env=$(conda info --envs | grep '*' | awk '{print $1}')
     echo "Running tests in the Mamba/Conda Environment $current_env..."
 
-    echo -e "/nTesting the MDAnalysis installation...\n"
+    echo -e "\nTesting the MDAnalysis installation...\n"
     PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print tolower($1) substr($2, 1, 4)}')
     MDATPATH=$ENV_PATH/lib/$PYTHON_VERSION/site-packages/MDAnalysisTests/
     PYTEST_PATH="$ENV_PATH/bin/pytest"
