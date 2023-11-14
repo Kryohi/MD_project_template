@@ -15,10 +15,12 @@ dependencies:
   - numpy>=1.23.1
   - scipy>=1.9.2
   - scikit-learn
+  - scikit-image
   - imbalanced-learn
   - biopython
   - biotite
   - ambertools=23
+  - pdbfixer
   - parmed
   - vmd-python
   - openmm
@@ -28,6 +30,7 @@ dependencies:
   - maicos
 #  - mdaencore
   - mdtraj
+  - loos
   - networkx
   - tabulate
   - pandas
@@ -64,14 +67,14 @@ dependencies:
   - sphinx_rtd_theme
   - jq
   - openai
-  - nvidia::cuda-driver-dev=12.2
-  - nvidia::cuda-toolkit=12.2
-  - nvidia::cuda-libraries=12.2
-  - nvidia::cuda-libraries-dev=12.2
-  - nvidia::cuda-tools=12.2
-  - nvidia::cuda-compiler=12.2
-  - nvidia::cuda-nvcc=12.2
+  - nvidia::cuda-driver-dev
+  - nvidia::cuda-toolkit
+  - nvidia::cuda-libraries
+  - nvidia::cuda-libraries-dev
+  - nvidia::cuda-tools
+  - nvidia::cuda-compiler
+  - nvidia::cuda-nvcc
   - nvidia::libcufft-dev
-  - nvidia::libcublas-dev=12.2
-  - nvidia::cuda-python=12.2
-#prefix: /home/kryohi/.miniconda3/envs/aging # read from initialize.sh using the conda -p option
+  - nvidia::libcublas-dev
+  - nvidia::cuda-python
+#prefix: /home/tizio/.miniconda3/envs/namek # read from initialize.sh using the conda -p option

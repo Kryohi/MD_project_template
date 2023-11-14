@@ -14,10 +14,12 @@ dependencies:
   - numpy>=1.23.1
   - scipy>=1.9.2
   - scikit-learn
+  - scikit-image
   - imbalanced-learn
   - biopython
   - biotite
   - ambertools=23
+  - pdbfixer
   - parmed
   - vmd-python
   - openmm
@@ -27,6 +29,7 @@ dependencies:
   - maicos
 #  - mdaencore
   - mdtraj
+  - loos
   - networkx
   - tabulate
   - pandas
@@ -63,4 +66,4 @@ dependencies:
   - sphinx_rtd_theme
   - jq
   - openai
-#prefix: /home/kryohi/.miniconda3/envs/aging # read from initialize.sh using the conda -p option
+#prefix: /home/tizio/.miniconda3/envs/namek # read from initialize.sh using the conda -p option
