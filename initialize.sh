@@ -184,37 +184,46 @@ detect_system_information() {
 
 create_folder_structure() {
 
-    echo -e -n "\nCreating folder structure... "
+    echo -e -n "\nCreating folder structure...\n"
     echo -e "-------------------\n"
+
 
 
     if (( FREE_SPACE_KiB < 300 * 1024 * 1024 )); then
         echo "Free space is less than 300GiB!"
-        echo "It is recommended that you provide a new path with sufficient space for storing the project data. The data folder will be automatically created:"
+        echo "It is recommended that you provide a new path with sufficient space for storing the project data. The data folder will be automatically created and a symlink will be added to the current folder."
+        echo "Press Enter if you want to keep the current folder or write a new path for the data folder:"
         read -r NEW_PATH
 
-        # Optionally, you might want to check if the provided path exists and has enough space
-        while [[ ! -d "$NEW_PATH" ]]; do
-            echo "The path does not exist. Please provide a valid path:"
-            read -r NEW_PATH
-        done
+        # Check if the user has entered a new path
+        if [[ -z "$NEW_PATH" ]]; then
+            echo "No new path provided. Continuing with the current folder."
+            mkdir -p "data" # create data folder in the current directory
+            echo "Data folder created in $PROJECT_FOLDER"
+        else
+            # Check if the provided path exists and has enough space
+            while [[ ! -d "$NEW_PATH" ]]; do
+                echo "The path does not exist. Please provide a valid path:"
+                read -r NEW_PATH
+            done
 
-        DEVICE=$(df $NEW_PATH | tail -1 | awk '{print $1}')
-        DEVICE_NAME=$(basename $DEVICE)
-        DEVICE_NAME=${DEVICE_NAME%p*}
-        DEVICE_TYPE=$(lsblk -d -o NAME,ROTA | grep $DEVICE_NAME | awk '{if ($2 == "0") print "SSD"; else print "HDD"}')
-        DEVICE_FREE=$(df -h . | awk 'NR==2 {print $4 " free out of " $2}')
+            DEVICE=$(df $NEW_PATH | tail -1 | awk '{print $1}')
+            DEVICE_NAME=$(basename $DEVICE)
+            DEVICE_NAME=${DEVICE_NAME%p*}
+            DEVICE_TYPE=$(lsblk -d -o NAME,ROTA | grep $DEVICE_NAME | awk '{if ($2 == "0") print "SSD"; else print "HDD"}')
+            DEVICE_FREE=$(df -h . | awk 'NR==2 {print $4 " free out of " $2}')
 
-        echo "The storage of the project directory is an $DEVICE_TYPE with $DEVICE_FREE of space."
+            echo "The storage of the project directory is an $DEVICE_TYPE with $DEVICE_FREE of space."
 
-        mkdir -p "$NEW_PATH/data"
+            mkdir -p "$NEW_PATH/data"
 
-        # Create a symlink from the new path to your project data directory
-        ln -s "$NEW_PATH" "$PROJECT_FOLDER"
-        echo "Symlink created from $NEW_PATH to $PROJECT_FOLDER/data"
+            # Create a symlink from the new path to your project data directory
+            ln -s "$NEW_PATH/data" "$PROJECT_FOLDER"
+            echo "Symlink created from $NEW_PATH to $PROJECT_FOLDER/data"
+        fi
     else
-        mkdir -p "data" # create data folder in the current
-        echo -e "Data folder created in $PROJECT_FOLDER"
+        mkdir -p "data" # create data folder in the current directory
+        echo "Data folder created in $PROJECT_FOLDER"
     fi
 
     mkdir -p "bin"
@@ -477,7 +486,7 @@ download_structures() {
     ../download_structures.sh "$NAME_GENE" "$PDB_ID"
 
 
-    cd ./forcefields
+    cd ./forcefields.ff
 
     # Amber forcefields (most recent included in ambertools from the conda-forge channel, using the amber format)
     # see http://www.ks.uiuc.edu/Research/namd/2.9/ug/node13.html to use them with namd
