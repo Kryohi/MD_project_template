@@ -9,8 +9,9 @@ def extract_regions_from_uniprot():
 
     # Check if the UNIPROT_ID is set
     if uniprot_id is not None:
+        os.getcwd()
         # Construct the file path
-        file_path = f"../data/00-structures/{uniprot_id}_UniProt_pretty.json"
+        file_path = f"../data/00-structures/external/{uniprot_id}_UniProt_pretty.json"
         print("File path:", file_path)
     else:
         print("UNIPROT_ID is not set")

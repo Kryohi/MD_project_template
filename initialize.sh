@@ -36,8 +36,9 @@
 #        personalize the folder structure based on the type of simulation(s) (REMD, GAMD etc.)
 #        integrate with cookiecutter (!?)
 #        change environment to inside project (with --prefix)?
-#        make openmm and gamd packages/tests optional
-#        create sympling of force field folder to 00-structures so that gromacs can find them
+#        add vmd to condaenv and download pymol via pip only if they are not already installed (also Julia?)
+#        download alphafill structures instead of alphadb (or both) https://alphafill.eu/v1/aff/${entryid}
+#        a99sb-disp fix for OPENMM from https://github.com/CongWang98/Modified_a99SBdisp
 
 
 # Initialize variables with default values
@@ -220,6 +221,7 @@ create_folder_structure() {
     mkdir -p "src"
     mkdir -p "scripts"
     mkdir -p "img"
+    mkdir -p "software"
     mkdir -p "papers"
     mkdir -p "data/00-structures"
     mkdir -p "data/01-preanalysis"
@@ -377,18 +379,45 @@ install_additional_packages() {
     #wget https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz; tar xvfz mmseqs-linux-avx2.tar.gz; export PATH=$(pwd)/mmseqs/bin/:$PATH
 
 
-    ## Check installed software
 
-    if which vmd > /dev/null; then
-        echo -e "\nVMD is installed."
-    else
-        echo "VMD is not installed or is not in PATH."
+    ## Install additional optional libraries
+
+    set +e
+
+    # GAMD
+    if [ "$INSTALL_OPENMM" = true ]; then
+        git clone https://github.com/MiaoLab20/gamd-openmm
+        cd gamd-openmm
+        $ENV_PYTHON_PATH ./setup.py install
+        cd ..
     fi
 
+    git clone https://github.com/MiaoLab20/PyReweighting
+
+
     if which pymol > /dev/null; then
+        PYMOL_INSTALLED=true
         echo "pymol is installed."
     else
+        PYMOL_INSTALLED=false
         echo "pymol is not installed or is not in PATH. Keep in mind an opensource and free version of PyMol can be found at github.com/schrodinger/pymol-open-source"
+        read -p "Would you like to install it in the local environment? (y/N): " install_pymol
+        if [ "$install_pymol" = "y" ] || [ "$install_pymol" = "Y" ]; then
+            mamba install schrodinger pymol-bundle
+        fi
+    fi
+
+    if which vmd > /dev/null; then
+        VMD_INSTALLED=true
+        echo -e "\nVMD is installed."
+    else
+        VMD_INSTALLED=false
+        echo "VMD is not installed or is not in PATH."
+        read -p "Would you like to install it in the local environment? (y/N): " install_vmd
+        if [ "$install_vmd" = "y" ] || [ "$install_vmd" = "Y" ]; then
+            mamba install vmd
+        fi
+
     fi
 
     if which gmx > /dev/null; then
@@ -396,15 +425,9 @@ install_additional_packages() {
     else
         echo -e "GROMACS is not installed or is not in PATH.\n You might want to add source /usr/local/gromacs/bin/GMXRC to your bashrc or zshrc.\n"
     fi
-    echo
 
-
-
-    ## Install additional optional libraries
-
-    set +e
     echo -e "\nInstalling PyInteraph2..."
-    cd ./bin
+    cd ./software
     git clone https://github.com/ELELAB/pyinteraph2.git
     cd pyinteraph2
     #pip install -r requirements.txt
@@ -428,15 +451,7 @@ install_additional_packages() {
     git clone https://github.com/lazartomi/ens-dRMS
     echo
 
-    # GAMD
-    if [ "$INSTALL_OPENMM" = true ]; then
-        git clone https://github.com/MiaoLab20/gamd-openmm
-        cd gamd-openmm
-        $ENV_PYTHON_PATH ./setup.py install
-        cd ..
-    fi
 
-    git clone https://github.com/MiaoLab20/PyReweighting
 
     cd ..
     set -e
@@ -500,10 +515,10 @@ configure_git() {
     ".dcd"
     )
     folders=(
-    "bin/"
     "/imgs/"
     "/papers/"
     "/data/"
+    "/software/"
     )
 
     # download and extend good gitignore, if not already present
