@@ -2,6 +2,7 @@ name: aging
 channels:
   - conda-forge
   - bioconda
+  - salilab
   - defaults
 dependencies:
   - python>=3.9.0
@@ -9,6 +10,7 @@ dependencies:
   - setuptools
   - pipx
   - cython
+  - boost
   - setuptools>=61.2.0
   - python-dotenv
   - numpy>=1.23.1
@@ -16,8 +18,11 @@ dependencies:
   - scikit-learn
   - scikit-image
   - imbalanced-learn
+  - dask
   - biopython
   - biotite
+  - dssp
+  - modeller
   - ambertools=23
   - pdbfixer
   - parmed
