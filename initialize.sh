@@ -135,7 +135,7 @@ detect_system_information() {
     echo -e "CPU Information:"
     echo
     echo -n "$(lscpu | grep "Model name" | awk '{$1=$1; print}') "
-    avxlevel=$(./avxlevel.sh)
+    avxlevel=$(./scripts/avxlevel.sh)
     numthreads=$(lscpu | grep "^CPU(s):" | awk '{print $2}')
     echo "(x86-64-v$avxlevel, $numthreads threads)"
     echo
@@ -392,6 +392,7 @@ install_additional_packages() {
     ## Install additional optional libraries
 
     set +e
+    cd software
 
     # GAMD
     if [ "$INSTALL_OPENMM" = true ]; then
@@ -435,8 +436,11 @@ install_additional_packages() {
         echo -e "GROMACS is not installed or is not in PATH.\n You might want to add source /usr/local/gromacs/bin/GMXRC to your bashrc or zshrc.\n"
     fi
 
+    echo -e "\nInstalling PROPKA..."
+    $ENV_PIP_PATH install propka
+
+
     echo -e "\nInstalling PyInteraph2..."
-    cd ./software
     git clone https://github.com/ELELAB/pyinteraph2.git
     cd pyinteraph2
     #pip install -r requirements.txt
@@ -461,7 +465,6 @@ install_additional_packages() {
     echo
 
 
-
     cd ..
     set -e
     echo
@@ -476,14 +479,16 @@ download_structures() {
 
     cd data
 
-    # Name of the protein/system
     echo -e "Please write the name of the gene you want to work on:"
     read NAME_GENE
 
-    echo -e "Please write the name of the PDB of the wild-type protein, if it's available on RCSPDB:"
+    echo -e "Please write the code of the species (9606 for Homo Sapiens):"
+    read SPECIES_ID
+
+    echo -e "Please write the name of the PDB of interest, if it's available on RCSPDB:"
     read PDB_ID
 
-    ../download_structures.sh "$NAME_GENE" "$PDB_ID"
+    ../scripts/download_structures.sh "$NAME_GENE" "SPECIES_ID" "$PDB_ID"
 
 
     cd ./forcefields.ff
@@ -637,7 +642,9 @@ main() {
     set -e
 
     # make the necessary shell scripts executable
-    chmod +x avxlevel.sh download_structures.sh
+    cd scripts
+    chmod +x avxlevel.sh download_structures.sh searchpdbs.sh
+    cd ..
 
     # Call functions
     read_optional_args "$@"
