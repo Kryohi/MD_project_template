@@ -665,6 +665,7 @@ main() {
     if [ "$RUN_TESTS" = true ]; then
         run_tests
     fi
+    echo -e "Finished!\n"
 }
 
 
