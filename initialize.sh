@@ -141,6 +141,7 @@ detect_system_information() {
     echo
 
     # GPU Info (Assumes NVIDIA GPU)
+    set +e
     if command -v nvidia-smi > /dev/null; then
         echo "GPU Information:"
         vram=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader)
@@ -163,6 +164,7 @@ detect_system_information() {
     else
         echo "CUDA is not installed or nvcc is not in PATH"
     fi
+    set -e
     echo
 
     # Storage info
