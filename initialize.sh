@@ -347,8 +347,11 @@ create_conda_environment() {
     conda env config vars set PROJECT_DIR=$PROJECT_FOLDER # retrieve in python with project_dir = os.getenv("PROJECT_DIR")
     echo -e "Project folder set in the PROJECT_DIR=$PROJECT_FOLDER Conda environmental variable.\n"
 
-    # Enable the environment for notebooks
+    # Enable the environment for notebooks and nglview
     $ENV_PYTHON_PATH -m ipykernel install --user --name $ENVIRONMENT_NAME
+    set +e
+    add jupyter-nbextension enable nglview --py --user
+    set -e
 
     echo
 }
