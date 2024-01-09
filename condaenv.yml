@@ -27,6 +27,7 @@ dependencies:
   - pdbfixer
   - parmed
   - vmd-python
+  - nglview
   - openmm
   - mdanalysis
   - MDAnalysisTests
