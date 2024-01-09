@@ -21,7 +21,7 @@ if [ ! -z "$PDB_ID" ]; then
     echo "${PDB_ID}_rcspdb.pdb already exists in 00-structures, skipping download."
     fi
 else # we perform a search of available PDBs
-    ../scripts/searchpdbs.sh "$NAME_GENE" "$SPECIES_ID"
+    $PROJECT_FOLDER/scripts/searchpdbs.sh "$NAME_GENE" "$SPECIES_ID"
 fi
 
 
