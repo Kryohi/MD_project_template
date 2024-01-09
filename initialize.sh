@@ -493,7 +493,7 @@ download_structures() {
     echo -e "Please write the name of the PDB of interest, if it's available on RCSPDB:"
     read PDB_ID
 
-    ../scripts/download_structures.sh "$NAME_GENE" "$SPECIES_ID" "$PDB_ID"
+    $PROJECT_FOLDER/scripts/download_structures.sh "$NAME_GENE" "$SPECIES_ID" "$PDB_ID"
 
 
     cd ./forcefields.ff
