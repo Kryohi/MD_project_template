@@ -19,6 +19,7 @@ dependencies:
   - scikit-image
   - imbalanced-learn
   - umap-learn
+  - einops
   - dask
   - biopython
   - biotite
