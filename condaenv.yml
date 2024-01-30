@@ -41,7 +41,7 @@ dependencies:
   - networkx
   - tabulate
   - pandas
-  - pandas-profiling
+  - polars
   - matplotlib>=3.6.2
   - seaborn
   - notebook
