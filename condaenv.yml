@@ -37,6 +37,7 @@ dependencies:
   - maicos
 #  - mdaencore
   - mdtraj
+  - tidynamics
   - loos
   - networkx
   - tabulate
